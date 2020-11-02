@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Program": {
+      "commandName": "Project",
+      "commandLineArgs": "\"Tasks\\\\Task0.txt\""
+    }
+  }
+}
