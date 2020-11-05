@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ConsoleManager
+namespace ConsoleSolver
 {
     public interface IConsoleManager
     {
-        void RunProgram(string[] args);
+        void RunProgram(string[] pathToFile);
 
 
     }

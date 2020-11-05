@@ -9,25 +9,27 @@ using System.Security.Principal;
 using System.Text;
 using Serilog;
 
-namespace ConsoleManager
+namespace ConsoleSolver
 {
-    public class ConsoleManager<TData> : IConsoleManager
+    public class ConsoleSolver<TData> : IConsoleManager
     {
-        Func<string, TData> _dataReader;
-        Func<TData, ILogger, IEnumerable<TData>> _program;
-        Func<IEnumerable<TData>, ILogger, TData> _bestSolutionFinder;
+        private readonly Func<string, TData> _dataReader;
+        private readonly Func<TData, ILogger, IEnumerable<TData>> _solutionsFinder;
+        private readonly Func<IEnumerable<TData>, ILogger, TData> _bestSolutionFinder;
 
         int _separatorLength = 20;
 
-        ILogger _log;
+        private readonly ILogger _log;
+        public string Description { get; }
 
-        public ConsoleManager(
-            Func<string, TData> dataReader, 
-            Func<TData, ILogger, IEnumerable<TData>> program,
+        public ConsoleSolver(string description,
+            Func<string, TData> dataReader,
+            Func<TData, ILogger, IEnumerable<TData>> solutionsFinder,
             Func<IEnumerable<TData>, ILogger, TData> bestSolutionFinder)
         {
+            this.Description = description;
             _dataReader = dataReader;
-            _program = program;
+            _solutionsFinder = solutionsFinder;
             _bestSolutionFinder = bestSolutionFinder;
 
             _log = new LoggerConfiguration()
@@ -37,23 +39,23 @@ namespace ConsoleManager
                 .CreateLogger();
         }
 
-        public void RunProgram(string[] args)
+        public void RunProgram(string[] pathToFile)
         {
-            _log.Information($"{new string('=', _separatorLength)}\nProgram started at {DateTime.Now.ToShortTimeString()}.");
+            _log.Information($"{new string('=', _separatorLength)}\nRozpoczęcie działania programu: {DateTime.Now.ToShortTimeString()}.");
 
-            CheckArgs(args);
+            CheckArgs(pathToFile);
 
-            _log.Information("Getting path from arguments.");
-            var path = GetPathFromArgs(args);
+            _log.Information("Sprawdzanie podanego argumentu...");
+            var path = GetPathFromArgs(pathToFile);
 
-            _log.Information($"Reading and parsing input data from {path}");
-            TData inputData = _dataReader.Invoke(path);
+            _log.Information($"Ładowanie zawartości z pliku: {path}...");
+            var inputData = _dataReader.Invoke(path);
 
             var started = DateTime.Now;
             var stopwatch = Stopwatch.StartNew();
 
-            _log.Information($"Starting program...");
-            IEnumerable<TData> solutions = _program.Invoke(inputData, _log);
+            _log.Information($"Uruchamianie programu: {this.Description}...");
+            var solutions = _solutionsFinder.Invoke(inputData, _log);
 
             var bestSolution = _bestSolutionFinder(solutions, _log);
 

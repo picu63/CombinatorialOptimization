@@ -6,7 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ConsoleManager\ConsoleManager.csproj" />
+    <PackageReference Include="GraphX" Version="3.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ConsoleManager\ConsoleSolver.csproj" />
     <ProjectReference Include="..\GraphManager\GraphManager.csproj" />
   </ItemGroup>
 

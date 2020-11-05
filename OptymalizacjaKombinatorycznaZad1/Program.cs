@@ -1,8 +1,10 @@
 ﻿using System;
-using ConsoleManager;
+using ConsoleSolver;
 using GraphManager.Implementations;
 using GraphManager.Interfaces;
 using Program;
+using GraphX;
+using GraphX.Common.Models;
 
 namespace OptymalizacjaKombinatorycznaZad1
 {
@@ -10,12 +12,12 @@ namespace OptymalizacjaKombinatorycznaZad1
     {
         static void Main(string[] args)
         {
-            IConsoleManager consoleManager = new ConsoleManager<IGraph>(
-        new DataReader().ReadDataFromFile,
-        (graph, logger) => new GraphSolver().FindAllSolutions(graph, logger),
+            
+            IConsoleManager consoleManager = new ConsoleSolver<IGraph>("Optymalizacja kombinatoryczna ZAD1",
+                    new DataReader().ReadDataFromFile,
+        (graph, logger) => new GraphSolver().FindAllSolutionsWithLogger(graph, logger),
         (solutions, logger) => new GraphSolver().GetTheBestSolution(solutions, logger)
-    //(graph, logger) => new GraphSolver().FindMaximumVerticesSolutionWithLogger(graph, logger)
-    );
+            );
 
             consoleManager.RunProgram(args);
         }
