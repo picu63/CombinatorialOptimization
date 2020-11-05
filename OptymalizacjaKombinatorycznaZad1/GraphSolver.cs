@@ -25,29 +25,30 @@ namespace Program
             return new List<Graph>();
         }
 
-        private List<string> GetSolution(string vertex, string[][] graphEdges)
+        private List<string> GetSolution(string vertex, IEnumerable<string[]> graphEdges)
         {
             var verticesSolution = new List<string>();
 
             var excludedVertices = new HashSet<string>(new []{vertex});
             var excludedEdges = new HashSet<string[]>();
-            var currentEdges = graphEdges.Where(e => e.Any(edge => edge.Contains(vertex))).ToList();
-            var currentVertices = new List<string> {vertex};
+            var currentEdges = graphEdges.Where(e => e.Any(edge => edge.Contains(vertex)));
+            var currentVertices = Enumerable.Empty<string>().Add(new[] {vertex});
             while (true)
             {
-                excludedEdges.UnionWith(GetEdgesFromVertices(currentVertices, graphEdges));
-                excludedVertices.UnionWith(GetVerticesFromEdges(currentEdges));
-                excludedEdges.UnionWith(GetEdgesFromVertices(currentVertices, graphEdges));
+                excludedEdges.UnionWith(GetEdgesFromVertices(currentVertices, ref currentEdges));
+                currentVertices = currentEdges.SelectMany(edge => edge).Distinct().RemoveValues(currentVertices);
+                excludedVertices.UnionWith(currentVertices);
+                excludedEdges.UnionWith(GetEdgesFromVertices(currentVertices, ref currentEdges));
             }
 
         }
 
-        private IEnumerable<string> GetVerticesFromEdges(IEnumerable<string[]> edges)
+        private IEnumerable<string> GetVerticesFromEdges(ref IEnumerable<string[]> edges, ref IEnumerable<string> withoutVertices)
         {
-            return edges.SelectMany(edge => edge);
+            return edges.SelectMany(edge => edge).RemoveValues(withoutVertices);
         }
 
-        private IEnumerable<string[]> GetEdgesFromVertices(IEnumerable<string> vertices, IEnumerable<string[]> edges)
+        private IEnumerable<string[]> GetEdgesFromVertices(IEnumerable<string> vertices, ref IEnumerable<string[]> edges)
         {
             var output = new HashSet<string[]>();
             foreach (var vertex in vertices)
@@ -55,6 +56,7 @@ namespace Program
                 output.UnionWith(GetEdgesFromVertex(vertex, edges));
             }
 
+            edges = output;
             return output;
         }
 
