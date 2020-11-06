@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ConsoleManager\ConsoleSolver.csproj" />
-    <ProjectReference Include="..\GraphManager\GraphManager.csproj" />
+    <ProjectReference Include="..\GraphManager\GraphService.csproj" />
   </ItemGroup>
 
   <ItemGroup>

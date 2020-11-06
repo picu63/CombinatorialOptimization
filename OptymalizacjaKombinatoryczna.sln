@@ -9,7 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Zad1", "Zad1", "{5EDC1EA0-4
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleSolver", "ConsoleManager\ConsoleSolver.csproj", "{9A3C8E27-3CA3-406A-AA49-B57BF88F0EA2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GraphManager", "GraphManager\GraphManager.csproj", "{FA3F24FF-B763-47FB-A571-F674C1B887EE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GraphService", "GraphManager\GraphService.csproj", "{FA3F24FF-B763-47FB-A571-F674C1B887EE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
