@@ -17,7 +17,7 @@ namespace ConsoleSolver
         private readonly Func<TData, ILogger, IEnumerable<TData>> _solutionsFinder;
         private readonly Func<IEnumerable<TData>, ILogger, TData> _bestSolutionFinder;
 
-        int _separatorLength = 20;
+        int _separatorLength = 35;
 
         private readonly ILogger _log;
         public string Description { get; }
@@ -61,14 +61,14 @@ namespace ConsoleSolver
 
             var elapsed = stopwatch.Elapsed;
 
-            _log.Information($"Generating console result log.");
+            _log.Information($"Generowanie rozwiązań...");
             var consoleResult = GenerateLog(started, elapsed, solutions, bestSolution);
 
-            _log.Information($"Console dump:\n{consoleResult}"); 
+            _log.Information($"\n{consoleResult}"); 
 
-            _log.Information($"Program stopped at {DateTime.Now.ToShortTimeString()}.");
+            _log.Information($"Czas zakończenia pracy programu: {DateTime.Now.ToShortTimeString()}.");
 
-            Console.WriteLine("Press any key to exit...");
+            Console.WriteLine("Naciśnij dowolny klawisz aby zakończyć...");
 
             Console.ReadKey();
 
@@ -93,35 +93,35 @@ namespace ConsoleSolver
             var logContent = new StringBuilder();
             var content = "";
 
-            logContent.AppendLine($"{new string('=', _separatorLength)}");
+            logContent.AppendLine($"{new string('_', _separatorLength)}");
 
             //header
-            content = FormatHeader("Solutions found:");
+            content = FormatHeader("Znalezione rozwiązania:");
             logContent.AppendLine($"{content}");
 
             //all solutions
             for (int i = 0; i < solutions.Count(); i++)
             {
-                content = FormatSubheader($"Solution {i + 1}");
+                content = FormatSubheader($"Nr. rozwiązania: {i + 1}");
                 logContent.AppendLine(content);
                 logContent.AppendLine(solutions.ElementAt(i).ToString());
             }
 
-            //best solutions
-            content = FormatHeader("Best solution:");
-            logContent.AppendLine($"{content }");
-            logContent.AppendLine(bestSolution.ToString());
 
             //summary
-            content = FormatHeader("Summary:");
+            content = FormatHeader("PODSUMOWANIE:");
             logContent.AppendLine($"{content}");
 
-            logContent.AppendLine($"Program started at: {started.ToShortDateString()} {started.ToShortTimeString()}");
+            logContent.AppendLine($"Czas startu algorytmu: {started.ToShortDateString()} {started.ToShortTimeString()}");
             logContent.AppendLine();
-            logContent.AppendLine($"Elapsed time: {FormatTimeSpan(elapsed)}");
+            logContent.AppendLine($"Czas wykonania operacji: {FormatTimeSpan(elapsed)}");
             logContent.AppendLine();
-            logContent.AppendLine($"Found {solutions.Count()} solutions in total.");
+            logContent.AppendLine($"Znaleziono {solutions.Count()} rozwiązań.");
             logContent.AppendLine();
+            //best solutions
+            content = FormatHeader("NAJLEPSZE ROZWIĄZANIE:");
+            logContent.AppendLine($"{content }");
+            logContent.AppendLine(bestSolution.ToString());
 
             return logContent.ToString();
         }
@@ -130,11 +130,10 @@ namespace ConsoleSolver
         {
             var res = new StringBuilder();
 
+            res.AppendLine(new string('_', _separatorLength));
             res.AppendLine();
-            res.AppendLine(new string('-', _separatorLength));
             res.AppendLine(content);
-            res.AppendLine(new string('-', _separatorLength));
-            res.AppendLine();
+
 
             return res.ToString();
         }
@@ -143,11 +142,9 @@ namespace ConsoleSolver
         {
             var res = new StringBuilder();
 
+            res.AppendLine(new string('_', _separatorLength));
             res.AppendLine();
-            res.AppendLine(new string('.', _separatorLength));
             res.AppendLine(content);
-            res.AppendLine(new string('.', _separatorLength));
-            res.AppendLine();
 
             return res.ToString();
         }

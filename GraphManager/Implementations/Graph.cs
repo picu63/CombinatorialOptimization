@@ -37,18 +37,33 @@ namespace GraphManager.Implementations
         public override string ToString()
         {
             var result = new StringBuilder();
+            var vertices = $"Wierzchołki:\n{{ {string.Join(", ", Vertices)} }}";
+            var edges = $"Edges:\n{{ {string.Join(",  ", EdgesToStringArray(Edges) )} }}";
             
-            result.AppendLine($"Graph name: {Name}");
-            result.AppendLine($"Graph type: {Type}");
-            result.AppendLine();
-            result.AppendLine($"Vertices:\n{{ {string.Join(", ", Vertices)} }}");
-            result.AppendLine();
-            result.AppendLine($"{Vertices.Length} in total.");
-            result.AppendLine();
-            result.AppendLine($"Edges:\n{{ {string.Join(",  ", EdgesToStringArray(Edges) )} }}");
-            result.AppendLine();
-            result.AppendLine($"{Edges.Length} in total.");
-            result.AppendLine();
+            if (this.Edges == null || this.Edges?.Length == 0)
+            {
+                result.AppendLine("Podzbiór wierzchołków grafu");
+                result.AppendLine($"Liczba wierzchołków: {this.Vertices.Length}");
+                result.AppendLine(vertices);
+            }
+            else if(this.Vertices == null || this.Vertices?.Length == 0)
+            {
+                result.AppendLine("Zbiór krawędzi grafu");
+                result.AppendLine(edges);
+            }
+            else
+            {
+                result.AppendLine($"Nazwa grafu: {Name}");
+                result.AppendLine($"Typ grafu: {Type}");
+                result.AppendLine(vertices);
+                result.AppendLine();
+                result.AppendLine($"Liczba wierzchołków: {Vertices.Length}");
+                result.AppendLine();
+                result.AppendLine(edges);
+                result.AppendLine();
+                result.AppendLine($"{Edges.Length} in total.");
+                result.AppendLine(); 
+            }
 
             return result.ToString();
         }

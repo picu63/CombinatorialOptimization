@@ -20,5 +20,4 @@ namespace GraphManager.Models
             Closing = closing;
         }
     }
-
 }

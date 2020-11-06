@@ -3,11 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <AssemblyName>OptymalizacjaZad01</AssemblyName>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="GraphX" Version="3.0.0" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ConsoleManager\ConsoleSolver.csproj" />

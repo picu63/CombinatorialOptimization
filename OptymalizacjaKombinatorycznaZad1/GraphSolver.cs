@@ -1,61 +1,106 @@
-﻿using GraphManager.Extensions;
-using GraphManager.Implementations;
-using GraphManager.Interfaces;
-using Serilog;
-using System;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
+using System.Transactions;
+using GraphManager.Extensions;
+using GraphManager.Implementations;
+using GraphManager.Interfaces;
+using Serilog;
 
 namespace Program
 {
-    public class GraphSolver : IGraphSolver
+    public class GraphSolver
     {
-        ILogger _log;
-
-        public IEnumerable<IGraph> FindAllSolutions(IGraph inputGraph)
+        public IEnumerable<IGraph> FindAllSolutions(IGraph graph, ILogger logger)
         {
-            return FindAllSolutionsWithLogger(inputGraph, null);
-        }
-
-        public IEnumerable<IGraph> FindAllSolutionsWithLogger(IGraph inputGraph, ILogger logger)
-        {
-            var workingVertices = new List<string>(inputGraph.Vertices);
-
-            var solitaireVertices = GetUnattachedVertices(inputGraph);
-
-            workingVertices = workingVertices.RemoveValues(solitaireVertices).ToList();
-
+            logger.Debug("Start odnajdywania wszystkich rozwiązań.");
+            //Odnajdywanie wierzchołków które nie mają żadnych krawędzi
             var solutions = new List<IGraph>();
-
+            var verticesWithoutEdges = graph.Vertices.Where(v => !graph.Edges.Any(edge => edge.Contains(v))).ToList();
+            var workingVertices = graph.Vertices.RemoveValues(verticesWithoutEdges);
+            var minSolution = int.MaxValue;
             foreach (var vertex in workingVertices)
             {
-                logger?.Information($"Wyszukiwanie rozwiązania dla wierzchołka: {vertex}");
+                var solution = GetSolution(vertex, graph.Edges).ToList();
 
-                var solution = GetSolution(vertex, inputGraph.Edges).ToList();
+                    solution.Add(verticesWithoutEdges);
 
-                solution = solution.Add(solitaireVertices).ToList();
-
-                solution = solution.SortStringAsInt().ToList();
-
+                solution.Sort();
                 if (CheckIfSolutionAlreadyExist(solution, solutions).Yes())
                     continue;
-
-                logger?.Information($"Znaleziono rozwiązanie {solution.Count()} vertices.");
-
                 solutions.Add(new Graph("", "", solution.ToArray(), Array.Empty<string[]>()));
             }
-           
+
             return solutions;
         }
 
-        private bool CheckIfSolutionAlreadyExist(List<string> vertices, List<IGraph> solutions)
+        public async Task<IEnumerable<IGraph>> FindAllSolutionsAsync(IGraph graph, ILogger logger)
+        {
+            logger.Debug("Starting to find all solutions.");
+            //Odnajdywanie wierzchołków które nie mają żadnych krawędzi
+            var solutions = new ConcurrentBag<IGraph>();
+            try
+            {
+                var verticesWithoutEdges = graph.Vertices.Where(v => !graph.Edges.Any(edge => edge.Contains(v))).ToList();
+                var workingVertices = graph.Vertices.RemoveValues(verticesWithoutEdges);
+                var tasks = new List<Task>();
+                var minSolution = int.MaxValue;
+                foreach (var vertex in workingVertices)
+                {
+                    var task = Task.Run(() =>
+                    {
+                        var solution = GetSolution(vertex, graph.Edges);
+
+                        if (verticesWithoutEdges.Any())
+                        {
+                            solution = solution.Add(verticesWithoutEdges);
+                        }
+
+                        var sortedSolution = solution.OrderBy(x => x.Length).ThenBy(x => x).ToArray();
+                        if (!CheckIfSolutionAlreadyExist(solution, solutions))
+                           solutions.Add(new Graph("", "", sortedSolution, Array.Empty<string[]>()));
+                    });
+                    tasks.Add(task);
+                }
+
+                await Task.WhenAll(tasks);
+
+
+                //Parallel.ForEach(workingVertices, vertex =>
+                //{
+                //    var solution = GetSolution(vertex, graph.Edges);
+
+                //    if (verticesWithoutEdges.Any())
+                //    {
+                //        solution.Add(verticesWithoutEdges);
+                //    }
+
+                //    var sortedSolution = solution.OrderBy(x => x.Length).ThenBy(x => x);
+                //    if (!CheckIfSolutionAlreadyExist(solution, solutions))
+                //        solutions.Add(new Graph("", "", sortedSolution.ToArray(), Array.Empty<string[]>()));
+                //});
+            }
+            catch (AggregateException aggregateException)
+            {
+                logger.Error("Wystąpił jeden lub więcej błędów.");
+                throw;
+            }
+
+            logger?.Information($"Liczba znalezionych rozwiązań: {solutions?.Count()}");
+
+            return solutions;
+        }
+
+        private bool CheckIfSolutionAlreadyExist(IEnumerable<string> vertices, IEnumerable<IGraph> solutions)
         {
             foreach (var graph in solutions)
             {
                 var foundVertices = graph.Vertices;
 
-                if (foundVertices.Length != vertices.Count)
+                if (foundVertices.Length != vertices.Count())
                     continue;
 
                 if (foundVertices.SequenceEqual(vertices))
@@ -65,166 +110,73 @@ namespace Program
             return false;
         }
 
-        private bool SolutionsContainVertex(List<IGraph> solutions, string vertex)
+        private IEnumerable<string> GetSolution(string vertex, IEnumerable<string[]> graphEdges)
         {
-            foreach (var graph in solutions)
+            var verticesSolution = new HashSet<string>();
+            verticesSolution.Add(vertex);
+
+            var excludedVertices = new HashSet<string>(new[] { vertex });
+            var excludedEdges = new HashSet<string[]>();
+            
+            var currentEdges = graphEdges.Where(e => e.Any(edge => edge.Contains(vertex)));
+            var edgeBuffer = graphEdges;
+            var currentVertices = Enumerable.Empty<string>().Add(new[] { vertex });
+            while (edgeBuffer.Any())
             {
-                if (graph.Vertices.Contains(vertex))
-                    return true;
-            }
-
-            return false;
-        }
-
-        protected IEnumerable<string> GetSolution(string vertex, string[][] edges)
-        {
-            var solution = new List<string>(new[] { vertex });
-
-            var edgeBuffer = new List<string[]>(edges);
-            var excludedVertices = new List<string>();
-            var excludedEdges = new List<string[]>();
-            var searchingEdges = new List<string[]>();
-
-            while (edgeBuffer.Count > 0)
-            {
-                //z bufora krawędzi weź krawędzie do wykluczenia (tj. takie, któe zawierają wierzchołki rozwiązania)
-                excludedEdges = excludedEdges.Add(TakeEdgesContainingVertices(removeFromEdges: ref edgeBuffer, containingVertices: solution)).ToList();
-
-                if (edgeBuffer.Any().No())
-                    break; //żadne wierzchołki już się nie znajdą, bo z pustego bufora nic nie wejdzie do listy krawędzi przeszukiwanych, więc już teraz można przerwać
-
-                //z krawędzi wykluczonych weź wierzchołki nienależące do rozwiązania i dodaj do listy wierzchołków wykluczonych
-                excludedVertices = excludedVertices.Add(TakeVerticesFromEdges(browsedEdges: excludedEdges, exceptFor: solution)).ToList();
-
-                //z bufora krawędzi weź krawędzie zawierające wierzchołki wykluczone i dodaj je do krawędzi przeszukiwanych
-                searchingEdges = searchingEdges.Add(TakeEdgesContainingVertices(removeFromEdges: ref edgeBuffer, containingVertices: excludedVertices)).ToList();
-
-                //do rozwiązania dodaj wierzchołki z krawędzi przeszukiwanych, z pominięciem wierzchołków wykluczonych
-                solution = solution.Add(TakeVerticesFromEdges(browsedEdges: searchingEdges, exceptFor: excludedVertices)).ToList();
-
-                if (edgeBuffer.Any().No())
-                    break; //szkoda kilku milisekund na czyszczenie listy krawędzi przeszukiwanych i sprawdzanie warunku kolejnej iteracji
-
-                //wyczyść kolejkę krawędzi do przejrzenia
-                searchingEdges.Clear();
-
-            }
-
-            return solution;
-        }
-
-        protected IEnumerable<string> TakeVerticesFromEdges(List<string[]> browsedEdges, List<string> exceptFor)
-        {
-            var result = new List<string>();
-
-            foreach (var edge in browsedEdges)
-            {
-                var vertex1 = edge[0];
-                var vertex2 = edge[1];
-
-                if (exceptFor.Contains(vertex1).NoItDoesnt())
-                    result.Add(vertex1);
-
-                if (exceptFor.Contains(vertex2).NoItDoesnt())
-                    result.Add(vertex2);
-            }
-
-            result.Sort();
-
-            return result.Distinct();
-        }
-
-        protected IEnumerable<string[]> TakeEdgesContainingVertices(ref List<string[]> removeFromEdges, List<string> containingVertices)
-        {
-            var newEdgesList = new List<string[]>();
-            var result = new List<string[]>();
-
-            foreach (var edge in removeFromEdges)
-            {
-                if (containingVertices.Contains(edge[0]) || containingVertices.Contains(edge[1]))
-                    result.Add(edge);
-                else
-                    newEdgesList.Add(edge);
-            }               
-
-            removeFromEdges = newEdgesList;
-
-            return result;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
-        }
-
-        protected void RemoveEdgesContaingStartingVertex(string startingVertex, ref IGraph graph)
-        {
-            var resultEdges = new List<string[]>(graph.Edges);
-
-            foreach (var edge in graph.Edges)
-            {
-                if (edge.Contains(startingVertex))
+                excludedEdges.UnionWith(GetEdgesFromVertices(currentVertices, ref edgeBuffer, ref currentEdges));
+                if (!edgeBuffer.Any())
                 {
-                    resultEdges.Remove(edge);
+                    break;
                 }
+                currentVertices = currentEdges.SelectMany(edge => edge).Distinct().RemoveValues(currentVertices);
+                excludedVertices.UnionWith(currentVertices);
+                excludedEdges.UnionWith(GetEdgesFromVertices(currentVertices, ref edgeBuffer, ref currentEdges));
+                currentVertices = currentEdges.SelectMany(edge => edge).Distinct().RemoveValues(currentVertices);
+                verticesSolution.UnionWith(currentVertices);
+                //verticesSolution.AddRange(currentVertices);
             }
 
-            graph.ReplaceEdges(resultEdges.ToArray());
-
+            return verticesSolution.Distinct();
         }
 
-        protected IEnumerable<string> GetUnattachedVertices(IGraph inputGraph)
+        private IEnumerable<string> GetVerticesFromEdges(ref IEnumerable<string[]> edges, ref IEnumerable<string> withoutVertices)
         {
-            if (inputGraph.Vertices == null && inputGraph.Vertices.Any().No())
-                return Array.Empty<string>();
+            return edges.SelectMany(edge => edge).RemoveValues(withoutVertices);
+        }
 
-            var result = inputGraph.Vertices.ToList();
-
-            foreach (var edge in inputGraph.Edges)
+        private IEnumerable<string[]> GetEdgesFromVertices(IEnumerable<string> vertices, ref IEnumerable<string[]> edges, ref IEnumerable<string[]> currentEdges)
+        {
+            var output = new HashSet<string[]>();
+            foreach (var vertex in vertices)
             {
-                if (result.Contains(edge[0]))
-                    result.Remove(edge[0]);
-
-                if (result.Contains(edge[1]))
-                    result.Remove(edge[1]);
+                output.UnionWith(GetEdgesFromVertex(vertex, edges));
             }
 
-            return result;
+            currentEdges = output;
+            edges = edges.RemoveValues(output);
+            return output;
         }
 
-        public IGraph FindMaximumVerticesSolutionWithLogger(IGraph inputGraph, ILogger logger)
+        private IEnumerable<string[]> GetEdgesFromVertex(string vertex, IEnumerable<string[]> edges)
         {
-            var solutions = FindAllSolutionsWithLogger(inputGraph, logger);
-
-            logger?.Information($"Found {solutions.Count()} solutions in total.");
-            logger?.Information($"Getting the best solution...");
-
-            return GetTheBestSolution(solutions, logger);
-        }
-
-        public IGraph FindMaximumVerticesSolution(IGraph inputGraph)
-        {
-            return FindMaximumVerticesSolutionWithLogger(inputGraph, null);
+            return edges.Where(e => e.Contains(vertex));
         }
 
         public IGraph GetTheBestSolution(IEnumerable<IGraph> solutions, ILogger logger)
         {
-            var numberOfVertices = solutions.Select(x => x.Vertices.Length);
+            logger?.Information("Wyszukiwanie najlepszego rozwiązania...");
+            var selector = new Func<IGraph, int>(graph => graph.Vertices.Length);
+            var max = solutions.Max(selector);
+            var min = solutions.Min(selector);
 
-            var maxNumberOfVertices = numberOfVertices.Max();
-            var minNumberOfVertices = numberOfVertices.Min();
-
-            logger?.Information($"Found solutions contain from {minNumberOfVertices} up to {maxNumberOfVertices} vertices.");
-
-            var bestSolution = solutions
-                .Where(x => x.Vertices.Length == maxNumberOfVertices)
-                .FirstOrDefault();
-
-            if (bestSolution == null)
-                throw new Exception("There is no best solution for the given graph.");
-
-            logger?.Information("Best solution found.");
-
-            return bestSolution;
+            var theBestSolution = solutions.FirstOrDefault(graph => graph.Vertices.Length == min);
+            if (theBestSolution.Equals(null))
+            {
+                throw new ArgumentException("Błąd w znalezieniu najlepszego rozwiązania", nameof(theBestSolution));
+            }
+            logger?.Information("Znaleziono najlepsze rozwiązanie");
+            return theBestSolution;
         }
 
-
-
-        
     }
 }
