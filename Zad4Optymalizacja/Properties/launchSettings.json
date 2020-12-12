@@ -1,0 +1,11 @@
+﻿{
+  "profiles": {
+    "Zad4Optymalizacja": {
+      "commandName": "Project",
+      "dotnetRunMessages": "true",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
