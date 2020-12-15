@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
-namespace Zad4OK
+namespace Zad4PiotrOlearczyk
 {
     class Program
     {
@@ -12,6 +11,10 @@ namespace Zad4OK
 
         static void Main(string[] args)
         {
+            for (int i = 0; i < 100; i++)
+            {
+                Console.WriteLine(i);
+            }
             while (true)
             {
                 if (!InputAmount(out var numbersAmount)) continue;
@@ -21,29 +24,38 @@ namespace Zad4OK
                 int solution = GetMaxSolution(NumbersList);
                 Console.WriteLine($"Wynik: {solution}");
                 Console.WriteLine($"Upłynęło czasu: {stopWatch.ElapsedMilliseconds}");
-                
             }
         }
 
-        private static int GetMaxSolution(List<int> numbersList, int removedSum = 0)
+        private static int GetMaxSolution(List<int> numbersList)
         {
-            if (numbersList.Count == 3)
+            var totalSum=0;
+            while (true)
             {
-                return numbersList[0] + numbersList[1] + numbersList[2] + removedSum;
+                if (numbersList.Count == 2)
+                {
+                    return totalSum;
+                }
+                var index = FindMaxIndex(numbersList);
+                totalSum += numbersList[index - 1] + numbersList[index] + numbersList[index + 1];
+                numbersList.RemoveAt(index);
+            }
+        }
+
+        private static int FindMaxIndex(List<int> numbersList)
+        {
+            var maxDifferences = new List<int>();
+            for (int i = 1; i < numbersList.Count - 1; i++)
+            {
+                var sumNeighbors = numbersList[i - 1] + numbersList[i + 1];
+                var middleNumber = numbersList[i];
+                var difference = Math.Abs(sumNeighbors - middleNumber);
+                maxDifferences.Add(difference);
             }
 
-            List<int> maxValues = new List<int>();
-
-            var rangeForCalculation = Enumerable.Range(1, numbersList.Count - 2).ToList();
-            foreach (var i in rangeForCalculation)
-            {
-                removedSum = numbersList[i - 1] + numbersList[i] + numbersList[i + 1];
-                var cloneList = new List<int>(numbersList);
-                cloneList.RemoveAt(i);
-                maxValues.Add(GetMaxSolution(cloneList, removedSum));
-            }
-
-            return maxValues.Select(x => x + removedSum).Max();
+            var max = maxDifferences.Max();
+            var index = maxDifferences.IndexOf(max)+1;
+            return index;
         }
 
         private static bool InputAmount(out int numbersAmount)
